@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Gist</string>
+    <string name="accessibility_service_label">Gist Screen Summarizer</string>
+    <string name="accessibility_service_description">Gist reads on-screen text only when you tap the floating Gist bubble and sends it to the AI provider you choose to generate summaries and answer questions.</string>
+    <string name="qs_tile_label">Gist Bubble</string>
+    <string name="ask_gist_process_text">Ask Gist</string>
+</resources>

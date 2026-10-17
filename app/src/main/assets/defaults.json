@@ -1,0 +1,67 @@
+{
+  "defaultBackend": "GEMINI",
+  "models": {
+    "GEMINI": [
+      { "id": "gemini-2.5-flash", "displayName": "Gemini Flash", "contextTokens": 1000000 },
+      { "id": "gemini-2.5-pro", "displayName": "Gemini Pro", "contextTokens": 1000000 },
+      { "id": "gemini-2.0-flash", "displayName": "Gemini 2.0 Flash", "contextTokens": 1000000 }
+    ],
+    "OPENAI": [
+      { "id": "gpt-4o-mini", "displayName": "GPT-4o mini", "contextTokens": 128000 },
+      { "id": "gpt-4o", "displayName": "GPT-4o", "contextTokens": 128000 },
+      { "id": "o3-mini", "displayName": "o3-mini", "contextTokens": 200000 }
+    ],
+    "ANTHROPIC": [
+      { "id": "claude-sonnet-4-20250514", "displayName": "Claude Sonnet 4", "contextTokens": 200000 },
+      { "id": "claude-3-5-haiku-latest", "displayName": "Claude 3.5 Haiku", "contextTokens": 200000 }
+    ],
+    "OPENAI_COMPATIBLE": [
+      { "id": "openai/gpt-4o-mini", "displayName": "OpenRouter GPT-4o mini", "contextTokens": 128000 },
+      { "id": "llama3.2", "displayName": "Local Ollama (llama3.2)", "contextTokens": 32000 }
+    ],
+    "GEMINI_NANO": [
+      { "id": "gemini-nano", "displayName": "Gemini Nano (On-device)", "contextTokens": 4096 }
+    ],
+    "HANDOFF": [
+      { "id": "chatgpt-app", "displayName": "→ ChatGPT app", "contextTokens": 128000 },
+      { "id": "claude-app", "displayName": "→ Claude app", "contextTokens": 200000 },
+      { "id": "gemini-app", "displayName": "→ Gemini app", "contextTokens": 1000000 }
+    ],
+    "DEMO": [
+      { "id": "demo-flash", "displayName": "Gemini Flash", "contextTokens": 1000000 }
+    ]
+  },
+  "defaultAllowlist": [
+    "com.android.chrome",
+    "org.mozilla.firefox",
+    "com.brave.browser",
+    "com.microsoft.emmx",
+    "com.google.android.apps.magazines",
+    "com.nytimes.android",
+    "com.guardian",
+    "com.medium.reader",
+    "com.substack.app",
+    "com.reuters.jet",
+    "com.ft.news",
+    "com.bloomberg.android.plus"
+  ],
+  "defaultDenylist": [
+    "com.gist.app",
+    "com.android.settings",
+    "com.google.android.apps.messaging",
+    "com.google.android.apps.authenticator2",
+    "com.agilebits.onepassword",
+    "com.x8bit.bitwarden",
+    "com.dashlane",
+    "com.paypal.android.p2pmobile",
+    "com.chase.sig.android",
+    "com.wf.wellsfargomobile",
+    "com.infonow.bofa"
+  ],
+  "quickActionChips": [
+    { "label": "Key facts", "prompt": "Extract the key facts, statistics, and numbers from this article as concise bullet points." },
+    { "label": "ELI5", "prompt": "Explain like I'm 5 (ELI5)" },
+    { "label": "Counter-arguments", "prompt": "What are the strongest counter-arguments, missing perspectives, or limitations to the claims made in this article?" },
+    { "label": "Timeline", "prompt": "Construct a chronological timeline of the events described in this article." }
+  ]
+}
