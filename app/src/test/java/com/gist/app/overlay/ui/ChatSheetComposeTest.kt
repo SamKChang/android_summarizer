@@ -353,7 +353,7 @@ class ChatSheetComposeTest {
         }
 
         val reportDir = File("build/reports/visual_verification").apply { mkdirs() }
-        val artifactDir = File("/Users/samio/.gemini/antigravity/brain/552affdc-9134-4a3f-8642-6b627b5b9469")
+        val customOutDir = System.getenv("GIST_SCREENSHOT_DIR")?.takeIf { it.isNotBlank() }?.let { File(it).apply { mkdirs() } }
 
         fun saveScreenshot(name: String) {
             composeTestRule.waitForIdle()
@@ -365,8 +365,8 @@ class ChatSheetComposeTest {
             FileOutputStream(File(reportDir, name)).use { out ->
                 bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
             }
-            if (artifactDir.exists()) {
-                FileOutputStream(File(artifactDir, name)).use { out ->
+            if (customOutDir != null) {
+                FileOutputStream(File(customOutDir, name)).use { out ->
                     bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
                 }
             }
