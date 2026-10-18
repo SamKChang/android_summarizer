@@ -380,16 +380,32 @@ class GeminiNanoBackend @Inject constructor(
         }
 
         private fun detectRequestedLanguage(userQuery: String, systemPrompt: String): String? {
-            val q = userQuery.lowercase()
+            detectLanguageFromText(userQuery)?.let { return it }
+            val defaultLangLine = Regex(
+                "Default response language[^:]*:\\s*([^.\\n]+)",
+                RegexOption.IGNORE_CASE
+            ).find(systemPrompt)?.groupValues?.get(1)?.trim().orEmpty()
+            if (defaultLangLine.isNotEmpty()) {
+                detectLanguageFromText(defaultLangLine)?.let { return it }
+            }
+            return null
+        }
+
+        private fun detectLanguageFromText(text: String): String? {
+            val q = text.lowercase()
             return when {
-                q.contains("traditional chinese") || q.contains("繁體") || q.contains("繁体") -> "zh-TW"
-                q.contains("chinese") || q.contains("mandarin") || q.contains("中文") || q.contains("汉语") ||
-                    userQuery.any { it.code in 0x4E00..0x9FFF } && !userQuery.any { it.code in 0x3040..0x30FF } -> "zh"
-                q.contains("japanese") || q.contains("日本語") || userQuery.any { it.code in 0x3040..0x30FF } -> "ja"
-                q.contains("korean") || q.contains("한국어") || userQuery.any { it.code in 0xAC00..0xD7AF } -> "ko"
-                q.contains("spanish") || q.contains("español") || q.contains("espanol") -> "es"
-                q.contains("french") || q.contains("français") || q.contains("francais") -> "fr"
-                q.contains("german") || q.contains("deutsch") -> "de"
+                q.contains("traditional chinese") || q.contains("zh-tw") || q.contains("zh_tw") ||
+                    q.contains("繁體") || q.contains("繁体") -> "zh-TW"
+                q.contains("chinese") || q.contains("mandarin") || q == "zh" || q.contains("zh-cn") ||
+                    q.contains("中文") || q.contains("汉语") ||
+                    (text.any { it.code in 0x4E00..0x9FFF } && !text.any { it.code in 0x3040..0x30FF }) -> "zh"
+                q.contains("japanese") || q == "ja" || q.contains("日本語") ||
+                    text.any { it.code in 0x3040..0x30FF } -> "ja"
+                q.contains("korean") || q == "ko" || q.contains("한국어") ||
+                    text.any { it.code in 0xAC00..0xD7AF } -> "ko"
+                q.contains("spanish") || q == "es" || q.contains("español") || q.contains("espanol") -> "es"
+                q.contains("french") || q == "fr" || q.contains("français") || q.contains("francais") -> "fr"
+                q.contains("german") || q == "de" || q.contains("deutsch") -> "de"
                 else -> null
             }
         }
