@@ -17,14 +17,19 @@ object PromptBuilder {
         summaryLength: SummaryLength = SummaryLength.MEDIUM,
     ): String = buildString {
         append(baseSystemPrompt.trim())
-        val lang = if (responseLanguage == "auto" || responseLanguage.isBlank()) {
-            Locale.getDefault().displayLanguage.ifBlank { "English" }
-        } else {
-            responseLanguage
+        append(
+            "\nIMPORTANT CONVERSATIONAL RULES:\n" +
+                "1. Always prioritize the user's latest message in the chat.\n" +
+                "2. If the user asks to summarize or respond in a specific language (e.g. Chinese, Spanish, French, Japanese, German) or writes their message in that language, you MUST respond in that language.\n" +
+                "3. If the user asks a follow-up question or asks to deep-dive into a topic, provide a focused, conversational deep-dive on that specific topic using details from the article (and your broader knowledge when helpful), rather than repeating the general article summary."
+        )
+        if (responseLanguage != "auto" && responseLanguage.isNotBlank()) {
+            append("\nDefault response language (unless the user requests another language in chat): ")
+                .append(responseLanguage)
+                .append(".")
         }
-        append("\nRespond in ").append(lang).append(".")
         when (summaryLength) {
-            SummaryLength.SHORT -> append(" Keep answers very brief and punchy.")
+            SummaryLength.SHORT -> append(" Keep answers concise and punchy unless the user asks for a deep dive.")
             SummaryLength.MEDIUM -> {}
             SummaryLength.LONG -> append(" Provide thorough, detailed analysis.")
         }
@@ -46,7 +51,8 @@ object PromptBuilder {
         doc: CapturedDocument,
         articleTextToUse: String,
         priorTurns: List<ChatMessage>,
-        newUserPrompt: String
+        newUserPrompt: String,
+        initialAutoPrompt: String = "Summarize this article."
     ): List<ChatMessage> {
         val articleBlock = formatArticleBlock(doc, articleTextToUse)
         val result = mutableListOf<ChatMessage>()
@@ -59,18 +65,31 @@ object PromptBuilder {
                 )
             )
         } else {
-            // Inject article once in the first user turn
             val firstTurn = priorTurns.first()
-            val firstWithArticle = if (firstTurn.content.contains("<article")) {
-                firstTurn.copy(cacheablePrefix = true)
+            if (firstTurn.role == MessageRole.USER) {
+                val firstWithArticle = if (firstTurn.content.contains("<article")) {
+                    firstTurn.copy(cacheablePrefix = true)
+                } else {
+                    firstTurn.copy(
+                        content = "$articleBlock\n\n${firstTurn.content}",
+                        cacheablePrefix = true
+                    )
+                }
+                result.add(firstWithArticle)
+                result.addAll(priorTurns.drop(1))
             } else {
-                firstTurn.copy(
-                    content = "$articleBlock\n\n${firstTurn.content}",
-                    cacheablePrefix = true
+                // When the first stored message is the auto-generated ASSISTANT summary
+                // (created with displayAsUserBubble = false), prepend the initial USER turn
+                // with the <article> block so the conversation strictly alternates USER -> ASSISTANT -> USER.
+                result.add(
+                    ChatMessage(
+                        role = MessageRole.USER,
+                        content = "$articleBlock\n\n$initialAutoPrompt",
+                        cacheablePrefix = true
+                    )
                 )
+                result.addAll(priorTurns)
             }
-            result.add(firstWithArticle)
-            result.addAll(priorTurns.drop(1))
             result.add(ChatMessage(role = MessageRole.USER, content = newUserPrompt))
         }
         return result

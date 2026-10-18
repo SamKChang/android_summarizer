@@ -354,4 +354,77 @@ class GistEndToEndBehaviorTest {
         assertFalse(manager.uiState.value.isStreaming)
         assertEquals("Summary after retry.", manager.uiState.value.messages.single().content)
     }
+
+    @Test
+    fun `Conversational chat supports multi-language requests and topic deep-dives instead of repeating summary`() = runBlocking {
+        // Test with no cloud API key configured (offline/Demo fallback) AND verify PromptBuilder role alternation
+        val mockHttp = HttpClient(MockEngine { respond("") })
+        val router = buildRouter(mockHttp, FakeSecureStore())
+        val manager = ChatSessionManager(sessionDao, messageDao, router, settingsRepository)
+
+        val doc = CapturedDocument(
+            sourcePackage = "com.android.chrome",
+            title = "AI Semiconductor Supply Chain Report",
+            url = "https://arstechnica.com/semiconductors/supply-chain",
+            text = """
+                Global semiconductor foundries are expanding advanced packaging capacity to meet surging artificial intelligence accelerator demand.
+                
+                CoWoS (Chip-on-Wafer-on-Substrate) packaging bottlenecks have been the primary constraint on GPU shipments throughout the past four quarters, prompting major capital expenditure increases across Taiwan and the United States.
+                
+                Meanwhile, high-bandwidth memory (HBM3e) yields have improved by 18 percent as memory manufacturers transition to next-generation thermal compression bonding equipment.
+            """.trimIndent(),
+            wordCount = 72,
+            method = CaptureMethod.A11Y_TREE,
+            completeness = Completeness.LIKELY_COMPLETE
+        )
+
+        // 1. Initial capture -> generates initial summary
+        manager.onDocumentCaptured(doc)
+        waitForStreamDone(manager)
+        assertEquals(1, manager.uiState.value.messages.size)
+        val initialSummary = manager.uiState.value.messages.first().content
+        assertTrue(initialSummary.contains("TL;DR Summary"))
+
+        // 2. Ask for a deep dive into a specific topic ("CoWoS packaging bottlenecks and HBM3e")
+        manager.sendPrompt("Can you deep dive into CoWoS packaging bottlenecks and HBM3e yields?", displayAsUserBubble = true)
+        val startDeepDive = System.currentTimeMillis()
+        while ((manager.uiState.value.messages.size < 3 || manager.uiState.value.isStreaming) &&
+            (System.currentTimeMillis() - startDeepDive) < 5_000L
+        ) {
+            shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(200))
+            delay(25L)
+        }
+
+        val deepDiveReply = manager.uiState.value.messages.last().content
+        assertFalse("Should not repeat generic TL;DR Summary on a topic deep-dive", deepDiveReply.contains("### TL;DR Summary"))
+        assertTrue("Should provide a focused Deep Dive", deepDiveReply.contains("Deep Dive:"))
+        assertTrue("Should discuss CoWoS or HBM3e from the article", deepDiveReply.contains("CoWoS") || deepDiveReply.contains("HBM3e"))
+
+        // 3. Instruct the chat box to give the summary in another language (Traditional Chinese & Spanish)
+        manager.sendPrompt("Give me the summary in Traditional Chinese (繁體中文)", displayAsUserBubble = true)
+        val startLang = System.currentTimeMillis()
+        while ((manager.uiState.value.messages.size < 5 || manager.uiState.value.isStreaming) &&
+            (System.currentTimeMillis() - startLang) < 5_000L
+        ) {
+            shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(200))
+            delay(25L)
+        }
+
+        val chineseReply = manager.uiState.value.messages.last().content
+        assertTrue("Should respond in Traditional Chinese", chineseReply.contains("摘要") && chineseReply.contains("要點"))
+
+        // 4. Verify PromptBuilder.buildMessages strictly starts with USER turn even when first stored turn was ASSISTANT
+        val builtMessages = PromptBuilder.buildMessages(
+            doc = doc,
+            articleTextToUse = doc.text,
+            priorTurns = listOf(com.gist.app.llm.ChatMessage(MessageRole.ASSISTANT, initialSummary)),
+            newUserPrompt = "Summarize in Spanish"
+        )
+        assertEquals(3, builtMessages.size)
+        assertEquals(MessageRole.USER, builtMessages[0].role)
+        assertTrue(builtMessages[0].content.contains("<article"))
+        assertEquals(MessageRole.ASSISTANT, builtMessages[1].role)
+        assertEquals(MessageRole.USER, builtMessages[2].role)
+        assertEquals("Summarize in Spanish", builtMessages[2].content)
+    }
 }

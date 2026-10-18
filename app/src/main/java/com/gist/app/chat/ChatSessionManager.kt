@@ -376,7 +376,8 @@ class ChatSessionManager @Inject constructor(
                 doc = doc,
                 articleTextToUse = articleTextForPrompt,
                 priorTurns = budgetedHistory,
-                newUserPrompt = prompt
+                newUserPrompt = prompt,
+                initialAutoPrompt = settings.defaultAutoRunPrompt
             )
 
             val chatRequest = ChatRequest(
